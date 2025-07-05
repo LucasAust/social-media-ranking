@@ -1,4 +1,4 @@
-const { StreamingRankingEngine, generateTestPosts } = require('./ranking_engine');
+const { createUltraFastRankingEngine, UltraFastUtils } = require('./ultra_fast_ranking');
 
 /**
  * Quick test for specific post counts
@@ -26,25 +26,25 @@ function getMemoryUsage() {
 
 async function quickTest(numPosts, algorithm = 'hot_score') {
     console.log(`🚀 QUICK TEST: ${formatNumber(numPosts)} posts with ${algorithm.toUpperCase()}`);
-    console.log('=' * 50);
+    console.log('='.repeat(50));
     
     const startTime = performance.now();
     const startMemory = getMemoryUsage();
     
     console.log(`📊 Generating ${formatNumber(numPosts)} posts...`);
-    const posts = generateTestPosts(numPosts);
+    const posts = UltraFastUtils.generateTestPosts(numPosts);
     
     const generationTime = performance.now();
     console.log(`✅ Generated in ${((generationTime - startTime) / 1000).toFixed(3)}s`);
     console.log(`💾 Memory after generation: ${startMemory?.heapUsed}`);
     
     console.log(`\n🔧 Creating ranking engine...`);
-    const engine = new StreamingRankingEngine(50000);
+    const engine = createUltraFastRankingEngine({ batchSize: 50000 });
     
     console.log(`📈 Ranking posts...`);
     const rankingStart = performance.now();
     
-    const result = engine.rankPostsFromList(posts, algorithm, 100);
+    const result = engine.rankPosts(posts, algorithm, 100);
     
     const endTime = performance.now();
     const rankingTime = (endTime - rankingStart) / 1000;

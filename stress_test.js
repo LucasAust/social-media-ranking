@@ -1,240 +1,103 @@
-const { StreamingRankingEngine, generateTestPosts } = require('./ranking_engine');
+const { createUltraFastRankingEngine, UltraFastUtils } = require('./ultra_fast_ranking');
 
 /**
- * Comprehensive stress test for the ranking engine
- * Tests with 100,000s and 1,000,000s of posts
+ * Stress test for the ultra-fast ranking engine
+ * Usage: node stress_test.js [maxPosts] [algorithm]
+ * Examples:
+ *   node stress_test.js 1000000 hot_score
+ *   node stress_test.js 5000000 engagement_score
  */
 
 function formatNumber(num) {
     return num.toLocaleString();
 }
 
-function formatBytes(bytes) {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Bytes';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-}
-
 function getMemoryUsage() {
     if (typeof process !== 'undefined' && process.memoryUsage) {
         const mem = process.memoryUsage();
         return {
-            heapUsed: formatBytes(mem.heapUsed),
-            heapTotal: formatBytes(mem.heapTotal),
-            external: formatBytes(mem.external),
-            rss: formatBytes(mem.rss)
+            heapUsed: (mem.heapUsed / 1024 / 1024).toFixed(1) + ' MB',
+            heapTotal: (mem.heapTotal / 1024 / 1024).toFixed(1) + ' MB',
+            rss: (mem.rss / 1024 / 1024).toFixed(1) + ' MB'
         };
     }
     return null;
 }
 
-function printMemoryUsage(label) {
-    const mem = getMemoryUsage();
-    if (mem) {
-        console.log(`  💾 ${label}:`);
-        console.log(`    Heap Used: ${mem.heapUsed}`);
-        console.log(`    Heap Total: ${mem.heapTotal}`);
-        console.log(`    RSS: ${mem.rss}`);
-    }
-}
-
-async function stressTest(numPosts, algorithm = 'hot_score', topK = 100) {
-    console.log(`\n🚀 STRESS TEST: ${formatNumber(numPosts)} posts with ${algorithm.toUpperCase()}`);
-    console.log('=' * 60);
+async function stressTest(maxPosts = 1000000, algorithm = 'hot_score') {
+    console.log(`🚀 STRESS TEST: Up to ${formatNumber(maxPosts)} posts with ${algorithm.toUpperCase()}`);
+    console.log('='.repeat(60));
     
-    const startTime = performance.now();
-    const startMemory = getMemoryUsage();
+    const testSizes = [
+        100000,
+        250000,
+        500000,
+        1000000,
+        2500000,
+        5000000,
+        10000000
+    ].filter(size => size <= maxPosts);
     
-    console.log(`📊 Generating ${formatNumber(numPosts)} test posts...`);
-    const posts = generateTestPosts(numPosts);
-    
-    const generationTime = performance.now();
-    console.log(`✅ Generated ${formatNumber(posts.length)} posts in ${((generationTime - startTime) / 1000).toFixed(3)}s`);
-    printMemoryUsage('After Generation');
-    
-    console.log(`\n🔧 Creating ranking engine...`);
-    const engine = new StreamingRankingEngine(50000);
-    
-    console.log(`📈 Ranking posts with ${algorithm} algorithm...`);
-    const rankingStart = performance.now();
-    
-    const result = engine.rankPostsFromList(posts, algorithm, topK);
-    
-    const endTime = performance.now();
-    const rankingTime = (endTime - rankingStart) / 1000;
-    const totalTime = (endTime - startTime) / 1000;
-    const endMemory = getMemoryUsage();
-    
-    console.log(`\n📊 RESULTS:`);
-    console.log(`  ⏱️  Total Time: ${totalTime.toFixed(3)}s`);
-    console.log(`  🚀 Ranking Time: ${rankingTime.toFixed(3)}s`);
-    console.log(`  📈 Posts/Second: ${(numPosts / rankingTime).toFixed(0)}`);
-    console.log(`  🏆 Top Score: ${result.topPosts[0]?.[0].toFixed(6)}`);
-    console.log(`  📊 Top Post ID: ${result.topPosts[0]?.[1].postId}`);
-    console.log(`  💾 Engine Memory: ${result.memoryUsageMb.toFixed(1)} MB`);
-    
-    printMemoryUsage('Final');
-    
-    return {
-        numPosts,
-        algorithm,
-        totalTime,
-        rankingTime,
-        postsPerSecond: numPosts / rankingTime,
-        topScore: result.topPosts[0]?.[0],
-        memoryUsage: result.memoryUsageMb,
-        startMemory,
-        endMemory
-    };
-}
-
-async function runComprehensiveTests() {
-    console.log('🔥 COMPREHENSIVE RANKING ENGINE STRESS TESTS');
-    console.log('=' * 80);
-    
-    const testConfigs = [
-        { posts: 100000, algorithm: 'hot_score' },
-        { posts: 100000, algorithm: 'engagement_score' },
-        { posts: 100000, algorithm: 'time_decay' },
-        { posts: 500000, algorithm: 'hot_score' },
-        { posts: 500000, algorithm: 'engagement_score' },
-        { posts: 1000000, algorithm: 'hot_score' },
-        { posts: 1000000, algorithm: 'engagement_score' },
-        { posts: 2000000, algorithm: 'hot_score' }
-    ];
-    
-    const results = [];
-    
-    for (const config of testConfigs) {
-        try {
-            const result = await stressTest(config.posts, config.algorithm);
-            results.push(result);
-            
-            // Add a small delay between tests to let memory settle
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-        } catch (error) {
-            console.error(`❌ Test failed for ${formatNumber(config.posts)} posts with ${config.algorithm}:`, error.message);
-        }
+    for (const numPosts of testSizes) {
+        console.log(`\n📊 TESTING ${formatNumber(numPosts)} POSTS`);
+        console.log('-'.repeat(40));
+        
+        const startTime = performance.now();
+        const startMemory = getMemoryUsage();
+        
+        console.log(`📊 Generating ${formatNumber(numPosts)} posts...`);
+        const posts = UltraFastUtils.generateTestPosts(numPosts);
+        
+        const generationTime = performance.now();
+        console.log(`✅ Generated in ${((generationTime - startTime) / 1000).toFixed(3)}s`);
+        console.log(`💾 Memory after generation: ${startMemory?.heapUsed}`);
+        
+        console.log(`\n🔧 Creating ranking engine...`);
+        const engine = createUltraFastRankingEngine({ batchSize: 50000 });
+        
+        console.log(`📈 Ranking posts...`);
+        const rankingStart = performance.now();
+        
+        const result = engine.rankPosts(posts, algorithm, 100);
+        
+        const endTime = performance.now();
+        const rankingTime = (endTime - rankingStart) / 1000;
+        const totalTime = (endTime - startTime) / 1000;
+        const endMemory = getMemoryUsage();
+        
+        console.log(`\n📊 RESULTS for ${formatNumber(numPosts)} posts:`);
+        console.log(`  ⏱️  Total Time: ${totalTime.toFixed(3)}s`);
+        console.log(`  🚀 Ranking Time: ${rankingTime.toFixed(3)}s`);
+        console.log(`  📈 Posts/Second: ${(numPosts / rankingTime).toFixed(0)}`);
+        console.log(`  🏆 Top Score: ${result.topPosts[0]?.[0].toFixed(6)}`);
+        console.log(`  📊 Top Post ID: ${result.topPosts[0]?.[1].postId}`);
+        console.log(`  💾 Engine Memory: ${result.memoryUsageMb.toFixed(1)} MB`);
+        console.log(`  💾 Process Memory: ${endMemory?.heapUsed}`);
     }
     
-    // Print summary
-    console.log('\n' + '=' * 80);
-    console.log('📊 COMPREHENSIVE TEST SUMMARY');
-    console.log('=' * 80);
-    
-    console.log('\n🏆 Performance Summary:');
-    console.log('Posts | Algorithm | Time (s) | Posts/sec | Memory (MB)');
-    console.log('-'.repeat(60));
-    
-    results.forEach(result => {
-        console.log(`${formatNumber(result.numPosts).padStart(7)} | ${result.algorithm.padEnd(15)} | ${result.rankingTime.toFixed(3).padStart(7)} | ${result.postsPerSecond.toFixed(0).padStart(8)} | ${result.memoryUsage.toFixed(1).padStart(8)}`);
-    });
-    
-    // Find best performance
-    const bestPerformance = results.reduce((best, current) => 
-        current.postsPerSecond > best.postsPerSecond ? current : best
-    );
-    
-    console.log(`\n🏅 Best Performance: ${formatNumber(bestPerformance.numPosts)} posts with ${bestPerformance.algorithm} at ${bestPerformance.postsPerSecond.toFixed(0)} posts/sec`);
-    
-    // Save results
-    const fs = require('fs');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `stress_test_results_${timestamp}.json`;
-    
-    fs.writeFileSync(filename, JSON.stringify({
-        timestamp: new Date().toISOString(),
-        results,
-        summary: {
-            totalTests: results.length,
-            bestPerformance: {
-                posts: bestPerformance.numPosts,
-                algorithm: bestPerformance.algorithm,
-                postsPerSecond: bestPerformance.postsPerSecond
-            }
-        }
-    }, null, 2));
-    
-    console.log(`\n✅ Results saved to: ${filename}`);
-    
-    return results;
+    console.log(`\n✅ Stress test completed!`);
 }
 
-// Memory leak detection
-async function memoryLeakTest() {
-    console.log('\n🔍 MEMORY LEAK DETECTION TEST');
-    console.log('=' * 50);
-    
-    const iterations = 10;
-    const postsPerIteration = 100000;
-    const memorySnapshots = [];
-    
-    for (let i = 0; i < iterations; i++) {
-        console.log(`\n🔄 Iteration ${i + 1}/${iterations}`);
-        
-        const startMem = process.memoryUsage().heapUsed;
-        const posts = generateTestPosts(postsPerIteration);
-        const engine = new StreamingRankingEngine(50000);
-        const result = engine.rankPostsFromList(posts, 'hot_score', 100);
-        const endMem = process.memoryUsage().heapUsed;
-        
-        memorySnapshots.push({
-            iteration: i + 1,
-            startMemory: startMem,
-            endMemory: endMem,
-            difference: endMem - startMem
-        });
-        
-        console.log(`  Memory: ${formatBytes(startMem)} → ${formatBytes(endMem)} (${formatBytes(endMem - startMem)})`);
-        
-        // Force garbage collection if available
-        if (global.gc) {
-            global.gc();
-        }
-        
-        // Small delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    
-    const totalMemoryIncrease = memorySnapshots[memorySnapshots.length - 1].endMemory - memorySnapshots[0].startMemory;
-    console.log(`\n📊 Memory Leak Analysis:`);
-    console.log(`  Total Memory Increase: ${formatBytes(totalMemoryIncrease)}`);
-    console.log(`  Average per Iteration: ${formatBytes(totalMemoryIncrease / iterations)}`);
-    
-    if (totalMemoryIncrease > 50 * 1024 * 1024) { // 50MB threshold
-        console.log(`  ⚠️  Potential memory leak detected!`);
-    } else {
-        console.log(`  ✅ No significant memory leak detected`);
-    }
+// Get command line arguments
+const args = process.argv.slice(2);
+const maxPosts = parseInt(args[0]) || 1000000;
+const algorithm = args[1] || 'hot_score';
+
+// Validate inputs
+if (maxPosts <= 0) {
+    console.error('❌ Invalid max post count. Please provide a positive number.');
+    process.exit(1);
 }
 
-// Run tests
-async function main() {
-    try {
-        // Run comprehensive stress tests
-        await runComprehensiveTests();
-        
-        // Run memory leak detection
-        await memoryLeakTest();
-        
-        console.log('\n🎉 All tests completed successfully!');
-        
-    } catch (error) {
-        console.error('❌ Test suite failed:', error);
+const validAlgorithms = ['hot_score', 'engagement_score', 'time_decay'];
+if (!validAlgorithms.includes(algorithm)) {
+    console.error(`❌ Invalid algorithm. Please use one of: ${validAlgorithms.join(', ')}`);
+    process.exit(1);
+}
+
+// Run the test
+stressTest(maxPosts, algorithm)
+    .catch(error => {
+        console.error('❌ Stress test failed:', error.message);
         process.exit(1);
-    }
-}
-
-// Export for use
-module.exports = {
-    stressTest,
-    runComprehensiveTests,
-    memoryLeakTest
-};
-
-// Run if called directly
-if (require.main === module) {
-    main();
-} 
+    }); 

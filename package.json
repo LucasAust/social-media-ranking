@@ -1,18 +1,20 @@
 {
-  "name": "social-media-ranking-js",
+  "name": "ultra-fast-social-media-ranking",
   "version": "1.0.0",
-  "description": "High-performance social media ranking engine in JavaScript (Node.js)",
-  "main": "ranking_engine.js",
+  "description": "Ultra-fast social media ranking engine with easy JavaScript backend integration",
+  "main": "ultra_fast_ranking.js",
   "scripts": {
-    "benchmark": "node ranking_engine.js",
-    "stress-test": "node stress_test.js",
     "quick-test": "node quick_test.js",
+    "stress-test": "node stress_test.js",
+    "ultra-fast": "node ultra_fast_test.js",
     "test-100k": "node quick_test.js 100000",
     "test-500k": "node quick_test.js 500000",
-    "test-1m": "node quick_test.js 1000000",
-    "test-2m": "node quick_test.js 2000000"
+    "test-1m": "node quick_test.js 1000000"
   },
-  "keywords": ["ranking", "social media", "feed", "algorithm", "nodejs"],
+  "keywords": ["ranking", "social media", "feed", "algorithm", "nodejs", "backend", "performance"],
   "author": "Your Name",
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
 } 
