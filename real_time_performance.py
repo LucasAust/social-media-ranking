@@ -241,8 +241,14 @@ class RealTimeRankingAnalyzer:
                     else:
                         yield next(generate_test_posts(1))
             
+            # Filter out None values before passing to engine
+            def filtered_iterator():
+                for post in invalid_post_iterator():
+                    if post is not None:
+                        yield post
+            
             # The engine should handle this gracefully
-            post_iterator = invalid_post_iterator()
+            post_iterator = filtered_iterator()
             result = self.engine.rank_posts_streaming(
                 post_iterator,
                 algorithm="hot_score",
