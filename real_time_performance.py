@@ -239,7 +239,17 @@ class RealTimeRankingAnalyzer:
                     if i % 100 == 0:  # Every 100th post is invalid
                         yield None  # Invalid post
                     else:
-                        yield next(generate_test_posts(1))
+                        # Generate a valid post
+                        post = Post(
+                            post_id=f'post_{i:08d}',
+                            likes=(i * 7) % 10000 + 1,
+                            comments=(i * 3) % 1000 + 1,
+                            shares=(i * 5) % 500 + 1,
+                            upvotes=(i * 7) % 10000 + 1 + (i % 100),
+                            downvotes=(i % 50),
+                            timestamp=time.time() - (i % (86400 * 30))
+                        )
+                        yield post
             
             # Filter out None values before passing to engine
             def filtered_iterator():

@@ -100,11 +100,12 @@ class StreamingRankingEngine:
                     score = self._calculate_score(post, algorithm, **kwargs)
                     
                     # Use min-heap to maintain top_k posts
+                    # Add post_id to break ties when scores are equal
                     if len(min_heap) < top_k:
-                        heapq.heappush(min_heap, (score, post))
+                        heapq.heappush(min_heap, (score, post.post_id, post))
                     else:
                         # Replace the lowest scoring post if this one is better
-                        heapq.heappushpop(min_heap, (score, post))
+                        heapq.heappushpop(min_heap, (score, post.post_id, post))
                 
                 # Print memory usage every 10 batches
                 if batch_count % 10 == 0:
@@ -116,7 +117,8 @@ class StreamingRankingEngine:
             raise
         
         # Sort the top_k posts by score (descending)
-        top_posts = sorted(min_heap, reverse=True)
+        # Extract (score, post) from (score, post_id, post) tuples
+        top_posts = [(score, post) for score, post_id, post in sorted(min_heap, reverse=True)]
         
         end_time = time.time()
         end_memory = self._get_memory_usage()
